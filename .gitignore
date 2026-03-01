@@ -1,0 +1,51 @@
+# ----------------
+# Node
+# ----------------
+node_modules/
+npm-debug.log*
+package-lock.json
+
+# ----------------
+# OS files
+# ----------------
+.DS_Store
+
+# ----------------
+# Environment files
+# ----------------
+.env
+.env.*
+
+# ----------------
+# Logs
+# ----------------
+logs/
+*.log
+
+# ----------------
+# Kubernetes secrets
+# ----------------
+secrets.yaml
+*.secret.yaml
+
+# ----------------
+# Docker
+# ----------------
+.dockerignore
+
+# ----------------
+# VS Code
+# ----------------
+.vscode/
+
+# ----------------
+# Minikube / Local configs
+# ----------------
+*.tmp
+.cache/
+
+# ----------------
+# Terraform
+# ----------------
+.terraform/
+*.tfstate*
