@@ -17,4 +17,21 @@ namespace
 })
 }
 
-module.exports={listPods,deletePod}
+async function stressCpu(podName,namespace="default"){
+
+const exec=new k8s.Exec(kc)
+
+await exec.exec(
+namespace,
+podName,
+"api-service",
+["sh","-c","yes > /dev/null & sleep 15; kill $!"],
+process.stdout,
+process.stderr,
+null,
+false
+)
+
+}
+
+module.exports={listPods,deletePod,stressCpu}
