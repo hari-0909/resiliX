@@ -1,13 +1,13 @@
 const express=require("express")
 const cors=require("cors")
-
+const deployRoutes=require("./routes/deployRoutes")
 const chaosRoutes=require("./routes/chaosRoutes")
 
 const app=express()
 
 app.use(cors())
 app.use(express.json())
-
+app.use("/deploy",deployRoutes)
 app.use("/chaos",chaosRoutes)
 
 app.get("/health",(req,res)=>{
