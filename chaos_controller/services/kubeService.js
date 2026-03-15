@@ -34,4 +34,21 @@ false
 
 }
 
-module.exports={listPods,deletePod,stressCpu}
+async function addNetworkDelay(podName,namespace="default"){
+
+const exec=new k8s.Exec(kc)
+
+await exec.exec(
+namespace,
+podName,
+"api-service",
+["sh","-c","tc qdisc del dev eth0 root 2>/dev/null; tc qdisc add dev eth0 root netem delay 200ms"],
+process.stdout,
+process.stderr,
+null,
+false
+)
+
+}
+
+module.exports={listPods,deletePod,stressCpu,addNetworkDelay}

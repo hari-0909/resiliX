@@ -1,4 +1,4 @@
-const {listPods,deletePod,stressCpu}=require("../services/kubeService")
+const {listPods,deletePod,stressCpu,addNetworkDelay}=require("../services/kubeService")
 
 async function killApiPod(req,res){
 try{
@@ -69,4 +69,27 @@ res.status(500).json({error:"cpu chaos failed"})
 }
 }
 
-module.exports={killApiPod,killRedis,cpuStress}
+async function networkDelay(req,res){
+try{
+
+const pods=await listPods("default")
+
+const apiPod=pods.find(pod=>pod.metadata.name.startsWith("api-service"))
+
+if(!apiPod){
+return res.status(404).json({error:"api pod not found"})
+}
+
+const podName=apiPod.metadata.name
+
+await addNetworkDelay(podName,"default")
+
+res.json({message:`network delay injected on ${podName}`})
+
+}catch(err){
+console.error(err)
+res.status(500).json({error:"network chaos failed"})
+}
+}
+
+module.exports={killApiPod,killRedis,cpuStress,networkDelay}
