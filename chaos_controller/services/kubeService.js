@@ -51,4 +51,10 @@ false
 
 }
 
-module.exports={listPods,deletePod,stressCpu,addNetworkDelay}
+async function listDeployments(namespace="default"){
+const appsApi=kc.makeApiClient(k8s.AppsV1Api)
+const res=await appsApi.listNamespacedDeployment({namespace})
+return res.items
+}
+
+module.exports={listPods,deletePod,stressCpu,addNetworkDelay,listDeployments}

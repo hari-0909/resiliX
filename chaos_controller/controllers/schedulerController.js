@@ -52,4 +52,37 @@ res.status(500).json({error:"scheduler failed"})
 
 }
 
-module.exports={scheduleChaos}
+function stopSchedule(req,res){
+
+try{
+
+const {service}=req.body
+
+if(!service){
+return res.status(400).json({error:"service required"})
+}
+
+const job=activeSchedules[service]
+
+if(!job){
+return res.status(404).json({error:"no active schedule"})
+}
+
+clearInterval(job)
+
+delete activeSchedules[service]
+
+res.json({
+message:`scheduler stopped for ${service}`
+})
+
+}catch(err){
+
+console.error(err)
+res.status(500).json({error:"stop scheduler failed"})
+
+}
+
+}
+
+module.exports={scheduleChaos,stopSchedule}

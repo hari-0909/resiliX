@@ -4,6 +4,7 @@ const deployRoutes=require("./routes/deployRoutes")
 const chaosRoutes=require("./routes/chaosRoutes")
 const serviceChaosRoutes=require("./routes/serviceChaosRoutes")
 const schedulerRoutes=require("./routes/schedulerRoutes")
+const serviceRoutes=require("./routes/serviceRoutes")
 
 const app=express()
 
@@ -13,6 +14,7 @@ app.use("/deploy",deployRoutes)
 app.use("/chaos",chaosRoutes)
 app.use("/chaos",serviceChaosRoutes)
 app.use("/chaos",schedulerRoutes)
+app.use("/",serviceRoutes)
 
 app.get("/health",(req,res)=>{
 res.json({status:"chaos controller running"})
