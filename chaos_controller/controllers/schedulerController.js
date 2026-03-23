@@ -23,7 +23,8 @@ try{
 const pods=await listPods()
 
 const targetPod=pods.find(pod =>
-pod.metadata.name.startsWith(service)
+  pod.metadata.name.startsWith(service) &&
+  pod.status.phase==="Running"
 )
 
 if(targetPod){
@@ -37,7 +38,7 @@ console.log("scheduler error",err)
 
 },interval*1000)
 
-activeSchedules[service]=job
+activeSchedules[service]={job,interval}
 
 res.json({
 message:`chaos scheduled for ${service} every ${interval}s`
@@ -62,7 +63,8 @@ if(!service){
 return res.status(400).json({error:"service required"})
 }
 
-const job=activeSchedules[service]
+const jobObj=activeSchedules[service]
+const job=jobObj?.job
 
 if(!job){
 return res.status(404).json({error:"no active schedule"})
@@ -85,4 +87,20 @@ res.status(500).json({error:"stop scheduler failed"})
 
 }
 
-module.exports={scheduleChaos,stopSchedule}
+function getSchedules(req,res){
+try{
+
+const schedules=Object.keys(activeSchedules).map(service=>({
+service,
+interval:activeSchedules[service].interval
+}))
+
+res.json(schedules)
+
+}catch(err){
+console.error(err)
+res.status(500).json({error:"failed to fetch schedules"})
+}
+}
+
+module.exports={scheduleChaos,stopSchedule,getSchedules}
