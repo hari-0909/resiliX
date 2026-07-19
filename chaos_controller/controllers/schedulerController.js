@@ -28,7 +28,11 @@ const targetPod=pods.find(pod =>
 )
 
 if(targetPod){
-await deletePod(targetPod.metadata.name)
+const redis=require("redis")
+const client=redis.createClient({url:"redis://localhost:6379"})
+await client.connect()
+
+await client.lPush("chaos_queue",JSON.stringify({service}))
 console.log(`scheduled chaos killed ${targetPod.metadata.name}`)
 }
 
