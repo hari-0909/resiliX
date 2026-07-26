@@ -1,0 +1,82 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Experiment {
+  id        String   @id
+  chaosType String
+  target    Json
+  mode      String
+  createdAt DateTime
+}
+
+model Execution {
+  id           String    @id
+  experimentId String
+  status       String
+  source       String
+  createdAt    DateTime
+  queuedAt     DateTime?
+}
+
+model Result {
+  executionId  String   @id
+  experimentId String
+  status       String
+  error        String?
+  startedAt    DateTime
+  completedAt  DateTime
+  metricsBefore Json?
+  metricsAfter  Json?
+  analysis     Analysis?
+}
+
+model Analysis {
+  executionId     String   @id
+  experimentId    String
+  cpuDelta        Float?
+  memoryDelta     Float?
+  latencyDelta    Float?
+  errorRateDelta  Float?
+  podRestartDelta Float?
+  summary         String
+  createdAt       DateTime
+  result          Result   @relation(fields: [executionId], references: [executionId], onDelete: Cascade)
+}
+
+model Report {
+  executionId             String   @id
+  experimentId            String
+  experiment              Json
+  execution               Json
+  resultSnapshot          Json
+  metricsBefore           Json?
+  metricsAfter            Json?
+  analysis                Json
+  executionSummary        String
+  recoveryStatus          String
+  observedMetricChanges   Json
+  resilienceObservations  Json
+  createdAt               DateTime
+}
+
+model Template {
+  id            String   @id
+  name          String
+  executionType String
+  targetService String
+  namespace     String
+  duration      Int?
+  parameters    Json?
+  scheduleMode  String?
+  scheduledAt   DateTime?
+  cronExpression String?
+  scheduleStatus String?
+  createdAt     DateTime
+  updatedAt     DateTime
+}

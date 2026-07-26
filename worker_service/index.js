@@ -1,49 +1,112 @@
 const {createClient}=require("redis")
-const k8s=require("@kubernetes/client-node")
 const redis=createClient({url:"redis://localhost:6379"})
 redis.connect().catch(()=>{})
+const {handlePodDelete}=require("./handlers/podDeleteHandler")
+const {handleCpuStress}=require("./handlers/cpuStressHandler")
+const {handleMemoryStress}=require("./handlers/memoryStressHandler")
+const {reportResult}=require("./services/resultReporter")
 
-const kc=new k8s.KubeConfig()
-kc.loadFromDefault()
-
-const k8sApi=kc.makeApiClient(k8s.CoreV1Api)
-
-async function listPods(namespace="default"){
-    const res=await k8sApi.listNamespacedPod({namespace})
-    return res.items
+const executionHandlers={
+    pod_delete:handlePodDelete,
+    cpu_stress:handleCpuStress,
+    memory_stress:handleMemoryStress
 }
 
-async function deletePod(podName,namespace="default"){
-    await k8sApi.deleteNamespacedPod({
-        name:podName,
-        namespace
+async function dispatchExecution(message){
+    const handler=executionHandlers[message.executionType]
+
+    if(!handler){
+        throw new Error(`unsupported execution type ${message.executionType}`)
+    }
+
+    await handler(message)
+}
+
+function hasResultTarget(message){
+    return Boolean(message.executionId&&message.experimentId)
+}
+
+async function reportExecutionSuccess(message,startedAt){
+    if(!hasResultTarget(message)){
+        return
+    }
+
+    await reportResult({
+        executionId:message.executionId,
+        experimentId:message.experimentId,
+        target:{
+            service:message.service,
+            namespace:message.namespace
+        },
+        metricsBefore:message.metricsBefore,
+        status:"succeeded",
+        startedAt,
+        completedAt:new Date().toISOString()
     })
 }
 
-async function runChaos(service){
-    try{
-        const pods=await listPods()
-        const targetPod=pods.find(pod =>
-        pod.metadata.name.startsWith(service) &&
-        pod.status.phase==="Running"
-        )
-        if(!targetPod){
-            console.log("no pod found for",service)
-            return
-        }
-        await deletePod(targetPod.metadata.name)
-        console.log("worker killed",targetPod.metadata.name)
-    }catch(err){
-        console.error("worker error",err)
+async function reportExecutionFailure(message,err,startedAt){
+    if(!hasResultTarget(message)){
+        return
     }
+
+    await reportResult({
+        executionId:message.executionId,
+        experimentId:message.experimentId,
+        target:{
+            service:message.service,
+            namespace:message.namespace
+        },
+        metricsBefore:message.metricsBefore,
+        status:"failed",
+        error:err.message,
+        startedAt,
+        completedAt:new Date().toISOString()
+    })
 }
+
+function parseExecutionMessage(job){
+    const message=JSON.parse(job)
+
+    if(message.messageType==="execution"&&message.executionType){
+        return {
+            executionType:message.executionType,
+            experimentId:message.experimentId,
+            executionId:message.executionId,
+            metricsBefore:message.metricsBefore,
+            service:message.target?.service,
+            namespace:message.target?.namespace||"default"
+        }
+    }
+
+    if(message.service){
+        return {
+            executionType:"pod_delete",
+            experimentId:message.experimentId,
+            executionId:message.executionId,
+            metricsBefore:message.metricsBefore,
+            service:message.service,
+            namespace:"default"
+        }
+    }
+
+    throw new Error("unsupported execution message")
+}
+
 async function startWorker(){
     while(true){
         try{
             const job=await redis.brPop("chaos_queue",0)
             if(job){
-                const {service}=JSON.parse(job.element)
-                await runChaos(service)
+                const message=parseExecutionMessage(job.element)
+                const startedAt=new Date().toISOString()
+                try{
+                    await dispatchExecution(message)
+                    await reportExecutionSuccess(message,startedAt)
+                }catch(err){
+                    console.error("worker error",err)
+                    await reportExecutionFailure(message,err,startedAt)
+                }
             }
         }catch(err){
             console.error("queue error",err)
